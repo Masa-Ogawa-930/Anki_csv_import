@@ -169,9 +169,12 @@ impl ColumnContext {
         let stringify = self.stringify;
         self.field_source_columns
             .iter()
-            .map(|opt| opt.and_then(|idx| record.get(idx - 1)).map(stringify))
+            .map(|opt| {
+                opt.and_then(|idx| record.get(idx - 1))
+                .map(|s| stringify(strip_outer_quotes_and_trim(s))) //added
+            })
             .collect()
-    }
+}
 }
 
 fn str_from_record_column(column: Option<usize>, record: &csv::StringRecord) -> String {
@@ -195,7 +198,22 @@ pub(super) fn build_csv_reader(
         .flexible(true)
         .comment(Some(b'#'))
         .delimiter(delimiter.byte())
+        .quoting(false) // added
         .from_reader(reader))
+}
+
+fn strip_outer_quotes_and_trim(s: &str) -> &str { //eliminating blanks and quotation marks
+    let s = s.trim();
+    if s.starts_with('"') && s.ends_with('"'){
+        &s[1..s.len()-1].trim()
+    }else if s.starts_with('"'){
+        &s[1..s.len()].trim()
+    }else if s.ends_with('"'){
+        &s[0..s.len()-1].trim()
+    } 
+     else {
+        s
+    }
 }
 
 fn stringify_fn(is_html: bool) -> fn(&str) -> String {
