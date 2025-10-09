@@ -202,19 +202,20 @@ pub(super) fn build_csv_reader(
         .from_reader(reader))
 }
 
-fn strip_outer_quotes_and_trim(s: &str) -> &str { //eliminating blanks and quotation marks
-    let s = s.trim();
-    if s.starts_with('"') && s.ends_with('"'){
-        &s[1..s.len()-1].trim()
-    }else if s.starts_with('"'){
-        &s[1..s.len()].trim()
-    }else if s.ends_with('"'){
-        &s[0..s.len()-1].trim()
-    } 
-     else {
-        s
+fn strip_outer_quotes_and_trim(mut s: &str) -> &str {  //eliminating blanks and quotation marks
+    s = s.trim();
+    while s.starts_with('"') || s.ends_with('"') {
+        if s.starts_with('"') {
+            s = &s[1..];
+        }
+        if s.ends_with('"') {
+            s = &s[..s.len()-1];
+        }
+        s = s.trim();
     }
+    s
 }
+
 
 fn stringify_fn(is_html: bool) -> fn(&str) -> String {
     if is_html {

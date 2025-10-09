@@ -34,9 +34,9 @@ class TextImporter(NoteImporter):
         lineNum = 0
         ignored = 0
         if self.delimiter:
-            reader = csv.reader(self.data, delimiter=self.delimiter, doublequote=True)
+            reader = csv.reader(self.data, delimiter=self.delimiter, doublequote=True, quotechar='"')
         else:
-            reader = csv.reader(self.data, self.dialect, doublequote=True)
+            reader = csv.reader(self.data, self.dialect, doublequote=True, quotechar='"')
         try:
             for row in reader:
                 if len(row) != self.numFields:
@@ -105,7 +105,7 @@ class TextImporter(NoteImporter):
                     pass
         if self.dialect:
             try:
-                reader = csv.reader(self.data, self.dialect, doublequote=True)
+                reader = csv.reader(self.data, self.dialect, doublequote=True, quotechar='"')
             except Exception:
                 err()
         else:
@@ -118,7 +118,7 @@ class TextImporter(NoteImporter):
                     self.delimiter = ","
                 else:
                     self.delimiter = " "
-            reader = csv.reader(self.data, delimiter=self.delimiter, doublequote=True)
+            reader = csv.reader(self.data, delimiter=self.delimiter, doublequote=True, quotechar='"')
         try:
             while True:
                 row = next(reader)
