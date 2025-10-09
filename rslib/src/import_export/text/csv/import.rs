@@ -169,9 +169,12 @@ impl ColumnContext {
         let stringify = self.stringify;
         self.field_source_columns
             .iter()
-            .map(|s| stringify(strip_outer_quotes_and_trim(s))) // added
+            .map(|opt| {
+                opt.and_then(|idx| record.get(idx - 1))
+                .map(|s| stringify(strip_outer_quotes_and_trim(s))) //added
+            })
             .collect()
-    }
+}
 }
 
 fn str_from_record_column(column: Option<usize>, record: &csv::StringRecord) -> String {
