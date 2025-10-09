@@ -169,7 +169,10 @@ impl ColumnContext {
         let stringify = self.stringify;
         self.field_source_columns
             .iter()
-            .map(|opt| opt.and_then(|idx| record.get(idx - 1)).map(stringify))
+            .map(|opt| {
+                opt.and_then(|idx| record.get(idx - 1))
+                .map(|s| stringify(strip_outer_quotes_and_trim(s))) //added
+            })
             .collect()
     }
 }
@@ -195,7 +198,27 @@ pub(super) fn build_csv_reader(
         .flexible(true)
         .comment(Some(b'#'))
         .delimiter(delimiter.byte())
+        .quoting(false) // added
         .from_reader(reader))
+}
+
+fn strip_outer_quotes_and_trim(mut s: &str) -> &str { //eliminating blanks and quotation marks
+    s = s.trim();
+    let mut start_count = 0;
+    let mut end_count = 0;
+
+    while (s.starts_with('"') && start_count < 2) || (s.ends_with('"') && end_count < 2) {
+        if s.starts_with('"') && start_count < 2 {  //limiting times of the elimination upto twice to keep intended quotation marks
+            s = &s[1..];
+            start_count += 1;
+        }
+        if s.ends_with('"') && end_count < 2 {
+            s = &s[..s.len()-1];
+            end_count += 1;
+        }
+        s = s.trim();
+    }
+    s
 }
 
 fn stringify_fn(is_html: bool) -> fn(&str) -> String {
