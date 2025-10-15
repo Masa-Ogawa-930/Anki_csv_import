@@ -179,18 +179,8 @@ impl ColumnContext {
                 opt.and_then(|idx| {
                     record.get(idx - 1).map(|s| {
                         let remove_start = i == 0; // 先頭アイテムなら先頭の " を削除
-
-                        // 末尾削除条件を修正
-                        let remove_end = if Some(idx) == self.tags_column {
-                            // タグ列は末尾削除
-                            true
-                        } else if self.tags_column.is_some() && i == total - 1 {
-                            // タグ列がある場合、最後のフィールドだけ末尾削除
-                            false
-                        } else {
-                            // 通常の最後のフィールド
-                            i == total - 1
-                        };
+                        let remove_end = i == total - 1   // 最後のフィールド
+                            || Some(idx) == self.tags_column; // タグ列なら末尾 " を削除
 
                         stringify(&remove_double_quotes_inside(s, remove_start, remove_end))
                     })
@@ -198,7 +188,6 @@ impl ColumnContext {
             })
             .collect()
     }
-
 }
 
 fn str_from_record_column(column: Option<usize>, record: &csv::StringRecord) -> String {
