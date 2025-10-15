@@ -157,24 +157,48 @@ impl ColumnContext {
     }
 
     fn gather_tags(&self, record: &csv::StringRecord) -> Option<Vec<String>> {
-        self.tags_column.and_then(|i| record.get(i - 1)).map(|s| {
-            s.split_whitespace()
-                .filter(|s| !s.is_empty())
-                .map(ToString::to_string)
-                .collect()
-        })
-    }
+    self.tags_column.and_then(|i| record.get(i - 1)).map(|s| {
+        let cleaned = remove_double_quotes_inside(s, false, true); // 末尾は必ず削除
+        cleaned
+            .split_whitespace()
+            .filter(|s| !s.is_empty())
+            .map(ToString::to_string)
+            .collect()
+    })
+}
+
 
     fn gather_note_fields(&self, record: &csv::StringRecord) -> Vec<Option<String>> {
         let stringify = self.stringify;
+        let total = self.field_source_columns.len();
+
         self.field_source_columns
             .iter()
-            .map(|opt| {
-                opt.and_then(|idx| record.get(idx - 1))
-                .map(|s| stringify(strip_outer_quotes_and_trim(s))) //added
+            .enumerate()
+            .map(|(i, opt)| {
+                opt.and_then(|idx| {
+                    record.get(idx - 1).map(|s| {
+                        let remove_start = i == 0; // 先頭アイテムなら先頭の " を削除
+
+                        // 末尾削除条件を修正
+                        let remove_end = if Some(idx) == self.tags_column {
+                            // タグ列は末尾削除
+                            true
+                        } else if self.tags_column.is_some() && i == total - 1 {
+                            // タグ列がある場合、最後のフィールドだけ末尾削除
+                            false
+                        } else {
+                            // 通常の最後のフィールド
+                            i == total - 1
+                        };
+
+                        stringify(&remove_double_quotes_inside(s, remove_start, remove_end))
+                    })
+                })
             })
             .collect()
     }
+
 }
 
 fn str_from_record_column(column: Option<usize>, record: &csv::StringRecord) -> String {
@@ -202,24 +226,42 @@ pub(super) fn build_csv_reader(
         .from_reader(reader))
 }
 
-fn strip_outer_quotes_and_trim(mut s: &str) -> &str { //eliminating blanks and quotation marks
-    s = s.trim();
-    let mut start_count = 0;
-    let mut end_count = 0;
+fn remove_double_quotes_inside(s: &str, remove_start: bool, remove_end: bool) -> String {
+    let mut result = String::with_capacity(s.len());
+    let mut chars = s.chars().peekable();
 
-    while (s.starts_with('"') && start_count < 2) || (s.ends_with('"') && end_count < 2) {
-        if s.starts_with('"') && start_count < 2 {  //limiting times of the elimination upto twice to keep intended quotation marks
-            s = &s[1..];
-            start_count += 1;
+    // 中間の連続 "" を 1 つにまとめる
+    while let Some(c) = chars.next() {
+        if c == '"' {
+            if let Some('"') = chars.peek() {
+                chars.next(); // 次の " を消費
+                result.push('"'); // 1 つだけ残す
+            } else {
+                result.push(c);
+            }
+        } else {
+            result.push(c);
         }
-        if s.ends_with('"') && end_count < 2 {
-            s = &s[..s.len()-1];
-            end_count += 1;
-        }
-        s = s.trim();
     }
-    s
+
+    let trimmed = result.trim();
+    let bytes = trimmed.as_bytes();
+    let mut start = 0;
+    let mut end = trimmed.len();
+
+    // 先頭の " を削除
+    if remove_start && start < end && bytes[start] == b'"' {
+        start += 1;
+    }
+
+    // 末尾の " を削除
+    if remove_end && end > start && bytes[end - 1] == b'"' {
+        end -= 1;
+    }
+
+    trimmed[start..end].to_string()
 }
+
 
 fn stringify_fn(is_html: bool) -> fn(&str) -> String {
     if is_html {
