@@ -158,7 +158,7 @@ impl ColumnContext {
 
     fn gather_tags(&self, record: &csv::StringRecord) -> Option<Vec<String>> {
     self.tags_column.and_then(|i| record.get(i - 1)).map(|s| {
-        let cleaned = remove_double_quotes_inside(s, false, true); // 末尾は必ず削除
+        let cleaned = remove_double_quotes_inside(s, false, true);
         cleaned
             .split_whitespace()
             .filter(|s| !s.is_empty())
@@ -178,9 +178,9 @@ impl ColumnContext {
             .map(|(i, opt)| {
                 opt.and_then(|idx| {
                     record.get(idx - 1).map(|s| {
-                        let remove_start = i == 0; // 先頭アイテムなら先頭の " を削除
-                        let remove_end = i == total - 1   // 最後のフィールド
-                            || Some(idx) == self.tags_column; // タグ列なら末尾 " を削除
+                        let remove_start = i == 0;
+                        let remove_end = i == total - 1
+                            || Some(idx) == self.tags_column; 
 
                         stringify(&remove_double_quotes_inside(s, remove_start, remove_end))
                     })
@@ -219,12 +219,11 @@ fn remove_double_quotes_inside(s: &str, remove_start: bool, remove_end: bool) ->
     let mut result = String::with_capacity(s.len());
     let mut chars = s.chars().peekable();
 
-    // 中間の連続 "" を 1 つにまとめる
     while let Some(c) = chars.next() {
         if c == '"' {
             if let Some('"') = chars.peek() {
-                chars.next(); // 次の " を消費
-                result.push('"'); // 1 つだけ残す
+                chars.next();
+                result.push('"');
             } else {
                 result.push(c);
             }
@@ -238,12 +237,10 @@ fn remove_double_quotes_inside(s: &str, remove_start: bool, remove_end: bool) ->
     let mut start = 0;
     let mut end = trimmed.len();
 
-    // 先頭の " を削除
     if remove_start && start < end && bytes[start] == b'"' {
         start += 1;
     }
 
-    // 末尾の " を削除
     if remove_end && end > start && bytes[end - 1] == b'"' {
         end -= 1;
     }
